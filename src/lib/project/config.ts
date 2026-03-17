@@ -20,11 +20,16 @@ export const DEFAULT_CONFIG: DreamConfig = {
   flagging: {
     enabled: true,
     sensitivityLevel: 'clinical',
-    keywords: [],
+    keywords: [
+      'death', 'suicide', 'kill', 'violence',
+      'ölüm', 'intihar', 'öldür', 'şiddet',
+      'isolation', 'trapped', 'helpless', 'darkness',
+      'yalnız', 'hapsolmak', 'çaresiz', 'karanlık'
+    ],
   },
   soul: {
-    autoUpdate: false,
-    updateAfterSessions: 5,
+    autoUpdate: true,
+    updateAfterSessions: 2,
   },
 };
 

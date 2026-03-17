@@ -1,7 +1,44 @@
 import { useEditorStore } from '../../store/editorStore';
+import { useProjectStore } from '../../store/projectStore';
+import { useState, useEffect } from 'react';
+import { Flag } from '../../lib/flags/types';
+import { detectFlags } from '../../lib/flags/engine';
+import { parseConfig, DEFAULT_CONFIG } from '../../lib/project/config';
+import { readTextFile } from '@tauri-apps/plugin-fs';
+import { HighlightedTextarea } from './HighlightedTextarea';
 
 export function DreamEditor() {
   const { currentDream, updateFrontmatter, updateBody } = useEditorStore();
+  const { projectPath } = useProjectStore();
+  const [flags, setFlags] = useState<Flag[]>([]);
+
+  useEffect(() => {
+    async function analyzeContent() {
+      if (!currentDream || !projectPath) {
+        setFlags([]);
+        return;
+      }
+
+      try {
+        let config = DEFAULT_CONFIG;
+        try {
+          const configPath = `${projectPath}/.dreamconfig`;
+          const configContent = await readTextFile(configPath);
+          config = parseConfig(configContent);
+        } catch {
+          // Use default config
+        }
+
+        const detectedFlags = detectFlags(currentDream, config);
+        setFlags(detectedFlags);
+      } catch (error) {
+        console.warn('[DREAM EDITOR] Failed to detect flags:', error);
+        setFlags([]);
+      }
+    }
+
+    analyzeContent();
+  }, [currentDream?.content, projectPath]);
 
   if (!currentDream) return null;
 
@@ -69,11 +106,12 @@ export function DreamEditor() {
         <div className="px-4 py-2 border-b border-border">
           <div className="text-xs text-text-muted uppercase tracking-wide">Dream Content</div>
         </div>
-        <textarea
+        <HighlightedTextarea
           value={content}
-          onChange={(e) => updateBody(e.target.value)}
-          className="flex-1 w-full p-4 bg-background text-text-primary font-mono text-sm resize-none focus:outline-none"
+          onChange={(value) => updateBody(value)}
+          flags={flags}
           placeholder="Write the dream content here..."
+          className="flex-1 w-full p-4 bg-background text-text-primary font-mono text-sm resize-none focus:outline-none"
         />
       </div>
     </div>

@@ -46,5 +46,20 @@ export function createNewDreamFile(sessionNumber: number = 1): DreamFile {
 }
 
 export function serializeDreamFile(dream: DreamFile): string {
-  return matter.stringify(dream.content, dream.frontmatter);
+  const frontmatter = dream.frontmatter;
+  
+  const yamlLines = [
+    '---',
+    `id: ${frontmatter.id}`,
+    `date: ${frontmatter.date}`,
+    `session: ${frontmatter.session}`,
+    `tags: [${frontmatter.tags.map(t => `"${t}"`).join(', ')}]`,
+    `flagged: ${frontmatter.flagged}`,
+    `models_used: [${frontmatter.models_used.map(m => `"${m}"`).join(', ')}]`,
+    '---',
+    '',
+    dream.content
+  ];
+  
+  return yamlLines.join('\n');
 }

@@ -11,18 +11,40 @@ export function Editor() {
   const { currentFile, currentDream, currentContent, isDirty, fileType, setDirty } = useEditorStore();
 
   const handleSave = async () => {
-    if (!currentFile || !isDirty) return;
+    if (!currentFile) {
+      console.warn('[SAVE] No file selected');
+      return;
+    }
+
+    if (!isDirty) {
+      console.log('[SAVE] File not dirty, skipping save');
+      return;
+    }
+
+    console.log('[SAVE] Starting save for file:', currentFile);
+    console.log('[SAVE] File type:', fileType);
 
     try {
+      let contentToSave: string;
+
       if (fileType === 'dream' && currentDream) {
-        const serialized = serializeDreamFile(currentDream);
-        await writeTextFile(currentFile, serialized);
+        console.log('[SAVE] Serializing dream file...');
+        contentToSave = serializeDreamFile(currentDream);
+        console.log('[SAVE] Serialized content length:', contentToSave.length);
       } else {
-        await writeTextFile(currentFile, currentContent);
+        console.log('[SAVE] Using raw content...');
+        contentToSave = currentContent;
       }
+
+      console.log('[SAVE] Writing to file:', currentFile);
+      await writeTextFile(currentFile, contentToSave);
+      
+      console.log('[SAVE] ✓ File saved successfully');
       setDirty(false);
     } catch (error) {
-      console.error('Failed to save file:', error);
+      console.error('[SAVE] ✗ Failed to save file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to save file: ${errorMessage}`);
     }
   };
 
@@ -36,7 +58,7 @@ export function Editor() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentFile, currentDream, currentContent, isDirty, fileType]);
+  });
 
   if (!currentFile) {
     return (

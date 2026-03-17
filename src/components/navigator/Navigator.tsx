@@ -7,11 +7,19 @@ import { createNewDreamFile, parseDreamFile, serializeDreamFile } from '../../li
 import { initializeProject } from '../../lib/project/project';
 import { Button } from '../ui/Button';
 
+interface DreamFileInfo {
+  name: string;
+  date: Date;
+  session: number;
+}
+
 export function Navigator() {
   const { projectPath, projectName, dreamFiles, setDreamFiles } = useProjectStore();
-  const { setCurrentFile, setCurrentDream, setCurrentContent, setDirty } = useEditorStore();
+  const { currentFile, setCurrentFile, setCurrentDream, setCurrentContent, setDirty } = useEditorStore();
   const [loading, setLoading] = useState(false);
+  const [sortedDreams, setSortedDreams] = useState<DreamFileInfo[]>([]);
   const [hasSoulFile, setHasSoulFile] = useState(false);
+  const [hasConfigFile, setHasConfigFile] = useState(false);
 
   useEffect(() => {
     if (projectPath) {
@@ -28,6 +36,9 @@ export function Navigator() {
       
       const soulExists = await exists(`${projectPath}/soul.md`);
       setHasSoulFile(soulExists);
+      
+      const configExists = await exists(`${projectPath}/.dreamconfig`);
+      setHasConfigFile(configExists);
     } catch (error) {
       console.error('Failed to initialize project:', error);
     }
@@ -39,10 +50,29 @@ export function Navigator() {
     setLoading(true);
     try {
       const entries = await readDir(projectPath);
-      const dreams = entries
+      const dreamFileNames = entries
         .filter(entry => entry.name?.endsWith('.dream'))
         .map(entry => entry.name || '');
-      setDreamFiles(dreams);
+      
+      setDreamFiles(dreamFileNames);
+
+      const dreamInfos: DreamFileInfo[] = [];
+      for (const fileName of dreamFileNames) {
+        try {
+          const content = await readTextFile(`${projectPath}/${fileName}`);
+          const dream = parseDreamFile(content);
+          dreamInfos.push({
+            name: fileName,
+            date: new Date(dream.frontmatter.date),
+            session: dream.frontmatter.session,
+          });
+        } catch {
+          continue;
+        }
+      }
+
+      dreamInfos.sort((a, b) => b.date.getTime() - a.date.getTime());
+      setSortedDreams(dreamInfos);
     } catch (error) {
       console.error('Failed to read directory:', error);
     } finally {
@@ -105,23 +135,14 @@ export function Navigator() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-              Navigator
-            </div>
-            <div className="text-sm text-text-primary mt-1">{projectName}</div>
-          </div>
-          <Button
-            onClick={handleNewDream}
-            variant="ghost"
-            className="flex items-center gap-1 px-2 py-1 text-xs"
-          >
-            <Plus className="w-4 h-4" />
-            New Dream
-          </Button>
-        </div>
+      <div className="p-4 border-b border-border">
+        <Button
+          onClick={handleNewDream}
+          className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-white py-2 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Dream
+        </Button>
       </div>
       
       <div className="flex-1 overflow-y-auto">
@@ -129,35 +150,73 @@ export function Navigator() {
           <div className="p-4 text-sm text-text-muted">Loading...</div>
         ) : (
           <div className="py-2">
-            {hasSoulFile && (
-              <button
-                onClick={() => handleFileClick('soul.md', 'soul')}
-                className="w-full px-4 py-1.5 text-left text-sm text-accent hover:bg-surface transition-colors flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                soul.md
-              </button>
+            {/* Project Files Section */}
+            {(hasSoulFile || hasConfigFile) && (
+              <div className="mb-4">
+                <div className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wide">
+                  Project Files
+                </div>
+                {hasSoulFile && (
+                  <button
+                    onClick={() => handleFileClick('soul.md', 'soul')}
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                      currentFile?.endsWith('soul.md') 
+                        ? 'bg-accent/10 text-accent border-l-2 border-accent' 
+                        : 'text-text-primary hover:bg-surface/50'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    soul.md
+                  </button>
+                )}
+                {hasConfigFile && (
+                  <button
+                    onClick={() => handleFileClick('.dreamconfig', 'soul')}
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                      currentFile?.endsWith('.dreamconfig') 
+                        ? 'bg-accent/10 text-accent border-l-2 border-accent' 
+                        : 'text-text-muted hover:bg-surface/50'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    .dreamconfig
+                  </button>
+                )}
+              </div>
             )}
             
-            {dreamFiles.length > 0 && (
-              <div className="mt-2">
-                <div className="px-4 py-1 text-xs text-text-muted uppercase tracking-wide">
-                  Dream Sessions
+            {/* Dream Sessions Section */}
+            {sortedDreams.length > 0 && (
+              <div>
+                <div className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wide">
+                  Dream Sessions ({sortedDreams.length})
                 </div>
-                {dreamFiles.map((file) => (
+                {sortedDreams.map((dream) => (
                   <button
-                    key={file}
-                    onClick={() => handleFileClick(file, 'dream')}
-                    className="w-full px-4 py-1.5 text-left text-sm text-text-primary hover:bg-surface transition-colors"
+                    key={dream.name}
+                    onClick={() => handleFileClick(dream.name, 'dream')}
+                    className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                      currentFile?.endsWith(dream.name) 
+                        ? 'bg-accent/10 text-accent border-l-2 border-accent' 
+                        : 'text-text-primary hover:bg-surface/50'
+                    }`}
                   >
-                    {file}
+                    <div className="flex items-center justify-between">
+                      <span>Session {dream.session}</span>
+                      <span className="text-xs text-text-muted">
+                        {dream.date.toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>
             )}
             
-            {dreamFiles.length === 0 && !hasSoulFile && (
-              <div className="p-4 text-sm text-text-muted">No files yet. Click "New Dream" to start.</div>
+            {sortedDreams.length === 0 && !hasSoulFile && (
+              <div className="p-4 text-center text-sm text-text-muted">
+                <p>No dream sessions yet.</p>
+                <p className="mt-1">Create your first.</p>
+              </div>
             )}
           </div>
         )}

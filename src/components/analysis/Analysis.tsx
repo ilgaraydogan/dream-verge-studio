@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, AlertCircle } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
 import { useProjectStore } from '../../store/projectStore';
@@ -8,7 +8,11 @@ import { AnalysisResult } from '../../lib/ai/types';
 import { readTextFile, exists } from '@tauri-apps/plugin-fs';
 import { parseConfig } from '../../lib/project/config';
 
-export function Analysis() {
+interface AnalysisProps {
+  triggerAnalysis?: number;
+}
+
+export function Analysis({ triggerAnalysis }: AnalysisProps) {
   const { currentDream, fileType } = useEditorStore();
   const { projectPath } = useProjectStore();
   
@@ -18,6 +22,12 @@ export function Analysis() {
   const [error, setError] = useState<string | null>(null);
 
   const canAnalyze = fileType === 'dream' && currentDream && projectPath;
+
+  useEffect(() => {
+    if (triggerAnalysis && triggerAnalysis > 0) {
+      handleAnalyze();
+    }
+  }, [triggerAnalysis]);
 
   const handleAnalyze = async () => {
     if (!canAnalyze || !currentDream || !projectPath) return;
@@ -39,10 +49,18 @@ export function Analysis() {
       console.log('Soul context loaded:', soulContext.length, 'chars');
 
       console.log('Step 2: Reading .dreamconfig...');
-      const configPath = `${projectPath}/.dreamconfig`;
-      const configContent = await readTextFile(configPath);
-      const config = parseConfig(configContent);
-      console.log('Config loaded, models:', config.models);
+      let config;
+      try {
+        const configPath = `${projectPath}/.dreamconfig`;
+        const configContent = await readTextFile(configPath);
+        config = parseConfig(configContent);
+        console.log('Config loaded from file, models:', config.models);
+      } catch (error) {
+        console.warn('Failed to read .dreamconfig, using default config:', error);
+        const { DEFAULT_CONFIG } = await import('../../lib/project/config');
+        config = DEFAULT_CONFIG;
+        console.log('Using default config, models:', config.models);
+      }
 
       console.log('Step 3: Starting analysis with models...');
       const analysisResults = await analyzeWithAllModels(
