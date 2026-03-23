@@ -1,0 +1,67 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install npm dependencies
+        run: npm install
+      
+      - name: Build macOS app
+        run: npm run tauri build
+        env:
+          VITE_OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+      
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dream-verge-studio-macos
+          path: src-tauri/target/release/bundle/dmg/*.dmg
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install npm dependencies
+        run: npm install
+      
+      - name: Build Linux app
+        run: npm run tauri build
+        env:
+          VITE_OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+      
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dream-verge-studio-linux
+          path: src-tauri/target/release/bundle/deb/*.deb

@@ -8,12 +8,13 @@
 ## Project Identity
 
 **Name:** Dream Verge Studio
-**Type:** Native macOS desktop application (Tauri v2)
+**Type:** Native macOS + Linux desktop application (Tauri v2)
 **Purpose:** Professional AI-powered dream analysis IDE for psychologists and therapists
 **License:** MIT
 **Owner:** Bayram Ilgar Aydoğan
 **Brand:** DreamVerge (dreamverge.ilgaraydogan.com.tr)
 **GitHub:** https://github.com/ilgaraydogan/dream-verge-studio
+**Current Version:** v0.1.0-alpha.2
 
 ---
 
@@ -28,16 +29,71 @@
 | Styling | Tailwind CSS + shadcn/ui | latest |
 | State management | Zustand | latest |
 | File system | Tauri FS API | — |
-| Secure storage | Tauri stronghold / OS keychain | — |
+| Secure storage | Tauri plugin-store | — |
 | Auto-update | Tauri Updater | — |
 | Build | Vite | latest |
 | CI/CD | GitHub Actions | — |
+| AI (Playground) | OpenRouter API | — |
+
+---
+
+## Application Modes
+
+Dream Verge Studio has two distinct modes:
+
+### 1. PROJECT MODE (Beta)
+Full IDE experience for professional clinical use.
+- Patient project folders
+- .dream file editor
+- soul.md patient profile
+- Multi-model AI analysis (user's own API keys)
+- Flagging system
+- Cross-session pattern detection
+
+### 2. PLAYGROUND MODE (New)
+Simple, accessible dream interpretation for anyone.
+- No project setup required
+- No API key required
+- User types their dream, AI interprets it
+- Uses OpenRouter API with embedded GPT-4o-mini-free key
+- Single page, chat-like interface
+- Results are NOT saved (session only)
 
 ---
 
 ## Application Architecture
 
-### Layout (Xcode-style, 4-pane)
+### Welcome Screen (Xcode-style)
+Shown on every app launch before any mode is selected.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   [DV Logo]          Dream Verge Studio                 │
+│                      v0.1.0-alpha.2                     │
+│                                                         │
+├─────────────────┬───────────────────────────────────────┤
+│                 │                                       │
+│  Recent         │   ┌─────────────────────────────┐    │
+│  Projects       │   │  📁 New Project        Beta  │    │
+│                 │   │  Professional dream analysis │    │
+│  - Project A    │   │  IDE. Patient folders,       │    │
+│  - Project B    │   │  multi-model AI, flagging.   │    │
+│  - Project C    │   └─────────────────────────────┘    │
+│                 │                                       │
+│  [Open Other]   │   ┌─────────────────────────────┐    │
+│                 │   │  ✨ Playground          New  │    │
+│                 │   │  Just type your dream and    │    │
+│                 │   │  get instant AI analysis.    │    │
+│                 │   │  No setup required.          │    │
+│                 │   └─────────────────────────────┘    │
+│                 │                                       │
+├─────────────────┴───────────────────────────────────────┤
+│  github.com/ilgaraydogan/dream-verge-studio    MIT      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Project Mode Layout (4-pane IDE)
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Toolbar (project name, run analysis, settings)      │
@@ -54,37 +110,211 @@
 └─────────────────────────────────────────────────────┘
 ```
 
+### Playground Mode Layout
+```
+┌─────────────────────────────────────────────────────┐
+│  [DV] Dream Verge Studio        [Open Project Mode] │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│         ✨ Dream Playground                         │
+│         Rüyanı yaz, AI yorumlasın                   │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  Rüyanı buraya yaz...                         │  │
+│  │                                               │  │
+│  │                                               │  │
+│  └───────────────────────────────────────────────┘  │
+│                    [Yorumla →]                      │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  AI Yorumu burada görünecek...                │  │
+│  └───────────────────────────────────────────────┘  │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
 ### Source Layout
 ```
 src/
-├── app/                    # App shell, routing, layout
+├── app/
+│   ├── WelcomeScreen.tsx       # Xcode-style launch screen
+│   ├── ProjectMode.tsx         # Full IDE wrapper
+│   ├── PlaygroundMode.tsx      # Simple chat wrapper
+│   └── router.tsx              # Mode routing
 ├── components/
-│   ├── editor/             # Dream file editor
-│   ├── navigator/          # Left panel: file tree, sessions
-│   ├── analysis/           # Right panel: AI model outputs
-│   ├── inspector/          # Bottom panel: meta, flags, soul
-│   └── ui/                 # shadcn/ui base components
+│   ├── editor/
+│   ├── navigator/
+│   ├── analysis/
+│   ├── inspector/
+│   ├── playground/
+│   │   ├── DreamInput.tsx
+│   │   ├── PlaygroundResult.tsx
+│   │   └── PlaygroundLayout.tsx
+│   ├── installer/
+│   │   └── InstallerScreen.tsx # Animasyonlu kurulum ekranı (ilk açılış)
+│   └── ui/
 ├── lib/
 │   ├── ai/
-│   │   ├── runner.ts       # Parallel model orchestration
-│   │   ├── openai.ts       # OpenAI adapter
-│   │   ├── anthropic.ts    # Anthropic adapter
-│   │   ├── gemini.ts       # Google Gemini adapter
-│   │   └── ollama.ts       # Ollama (local) adapter
+│   │   ├── runner.ts
+│   │   ├── openai.ts
+│   │   ├── anthropic.ts
+│   │   ├── gemini.ts
+│   │   ├── openrouter.ts
+│   │   └── ollama.ts
 │   ├── project/
-│   │   ├── project.ts      # Project model & serialization
-│   │   ├── dreamFile.ts    # .dream file parser/writer
-│   │   ├── soulFile.ts     # soul.md reader/writer
-│   │   └── config.ts       # .dreamconfig parser
+│   │   ├── project.ts
+│   │   ├── dreamFile.ts
+│   │   ├── soulFile.ts
+│   │   └── config.ts
 │   └── flags/
-│       ├── engine.ts       # Suspicion flag detection
-│       └── patterns.ts     # Cross-session pattern matching
+│       ├── engine.ts
+│       └── patterns.ts
 ├── store/
-│   ├── projectStore.ts     # Current project state
-│   ├── editorStore.ts      # Editor state
-│   └── settingsStore.ts    # API keys, preferences
+│   ├── projectStore.ts
+│   ├── editorStore.ts
+│   ├── settingsStore.ts
+│   └── appStore.ts             # Current mode (installer/welcome/project/playground)
 └── main.tsx
 ```
+
+---
+
+## Installer / First Launch Experience
+
+### Davranış
+- Uygulama ilk kez açıldığında (veya `onboarded` flag'i yoksa) **InstallerScreen** gösterilir
+- Dia Browser / ChatGPT Atlas tarzı: animasyonlu, şık, tek sayfalık karşılama akışı
+- Tamamlandığında `onboarded: true` Tauri plugin-store'a yazılır
+- Sonraki açılışlarda direkt WelcomeScreen açılır
+
+### Installer Akışı (3 adım, animated)
+```
+ADIM 1 — Karşılama
+  [DV Logo animasyonu — fade in + subtle scale]
+  "Dream Verge Studio'ya Hoş Geldiniz"
+  "Psikologlar için AI destekli rüya analiz IDE'si"
+  [Devam Et →]
+
+ADIM 2 — Modları Tanıt
+  İki kart yan yana, hover'da glow efekti:
+  [📁 Project Mode]     [✨ Playground]
+  "Klinik kullanım"     "Hızlı analiz"
+  [Devam Et →]
+
+ADIM 3 — Hazır
+  Checkmark animasyonu (çizgi çizer gibi)
+  "Her şey hazır!"
+  "API anahtarlarınızı Settings'ten ekleyebilirsiniz"
+  [Başla →]  ← Bu butona basınca WelcomeScreen açılır
+```
+
+### Installer Tasarım Kuralları
+- Arka plan: `#0d0d0d` — tam siyah, sade
+- Logo: ortada, `#8b5cf6` violet glow ile
+- Adım geçişleri: `framer-motion` veya CSS `@keyframes` ile slide + fade
+- Hiçbir adımda form veya input yok — sadece bilgi ve ileri butonu
+- Mobil veya küçük pencere düşünülmez — bu bir desktop app
+- "Skip" butonu sağ üstte her adımda mevcut
+
+---
+
+## Linux .deb Support
+
+### Hedef Dağıtımlar
+- Debian 12+
+- Ubuntu 22.04+
+- Pardus 23+
+
+### Tauri Build Konfigürasyonu
+`src-tauri/tauri.conf.json` bundle targets içine `"deb"` eklenir:
+```json
+"bundle": {
+  "active": true,
+  "targets": ["dmg", "deb"],
+  ...
+}
+```
+
+### Linux'a Özel Kurallar
+- Keychain yerine `tauri-plugin-store` kullan (zaten mevcut, cross-platform)
+- `$HOME/**` path'i Linux'ta da çalışır — capabilities dosyası değişmez
+- Uygulama ikonu: `src-tauri/icons/` klasöründeki `.png` dosyaları yeterli
+- `.deb` çıktısı: `src-tauri/target/release/bundle/deb/` altında
+- Linux build sadece Linux makinede veya GitHub Actions'ta yapılır
+
+### GitHub Actions — Linux Build
+`.github/workflows/release.yml` dosyasına Linux runner eklenir:
+```yaml
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    # mevcut macOS build
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install npm deps
+        run: npm install
+      - name: Build
+        run: npm run tauri build
+        env:
+          VITE_OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: dream-verge-studio-linux
+          path: src-tauri/target/release/bundle/deb/*.deb
+```
+
+### Linux'ta Test Etme (Mac'ten cross-build yapılmaz)
+- Linux build için GitHub Actions kullanılır
+- Local test için Ubuntu/Pardus sanal makine veya paralel kurulum gerekir
+- Şimdilik: macOS'ta geliştir, Linux build'i Actions üzerinden al
+
+---
+
+## Playground Mode — Technical Details
+
+### OpenRouter Integration
+- Model: `openai/gpt-4o-mini` (free tier)
+- API key: embedded in build via environment variable — NEVER hardcoded string
+- Base URL: `https://openrouter.ai/api/v1`
+- Required headers:
+  ```
+  Authorization: Bearer {VITE_OPENROUTER_KEY}
+  HTTP-Referer: https://dreamverge.ilgaraydogan.com.tr
+  X-Title: Dream Verge Studio
+  ```
+
+### Playground System Prompt
+```
+You are a professional dream interpreter assistant.
+Analyze the dream the user describes and provide:
+1. Key symbols and their psychological meaning
+2. Overall emotional tone
+3. Possible themes or messages
+4. A brief, thoughtful summary
+
+Be warm, professional, and insightful.
+Do not make medical diagnoses.
+Respond in the same language the user writes in.
+Keep response under 400 words.
+```
+
+### Rate Limiting
+- Limit: 3 analyses per session (soft limit, client-side)
+- After 3: show message "For unlimited analysis, use Project Mode with your own API key"
 
 ---
 
@@ -111,7 +341,7 @@ AI may propose updates; clinician approves. Auto-backup on every change.
 ### `.dreamconfig`
 ```typescript
 interface DreamConfig {
-  models: string[];           // e.g. ["gpt-4o", "claude-3-5-sonnet"]
+  models: string[];
   parallelAnalysis: boolean;
   language: string;           // "tr" | "en"
   flagging: {
@@ -130,68 +360,90 @@ interface DreamConfig {
 
 ## AI Integration Rules
 
-1. API keys are stored in the OS keychain via Tauri — NEVER store them in plain files or state.
-2. All model calls happen from TypeScript (`src/lib/ai/`). Rust does not call AI APIs directly.
-3. Parallel analysis: fire all configured models simultaneously with `Promise.allSettled()`.
-4. Each model response is stored as `<dreamId>.<modelId>.json` in the project folder.
-5. Model adapters must implement this interface:
-```typescript
-interface ModelAdapter {
-  id: string;
-  name: string;
-  analyze(dream: DreamFile, soul: string, config: DreamConfig): Promise<AnalysisResult>;
-}
-```
+1. PROJECT MODE: API keys stored via Tauri plugin-store — NEVER in plain files or state.
+2. PLAYGROUND MODE: OpenRouter key embedded at build time via environment variable.
+3. All model calls happen from TypeScript (`src/lib/ai/`). Rust does not call AI APIs.
+4. Parallel analysis: `Promise.allSettled()` for all configured models.
+5. Each model response stored as `<dreamId>.<modelId>.json` in project folder.
+6. FS permission errors: always fail gracefully with default values, never crash.
+
+---
+
+## Known Bugs (do not break workarounds)
+
+### BUG-001: FS Permission Error (GitHub Issue #1)
+- `.dreamconfig` and `.dream` files cannot be read from arbitrary folders
+- Workaround: if file read fails, use default config values silently
+- Do NOT remove this workaround until the bug is properly fixed
 
 ---
 
 ## Design System
 
 - **Aesthetic:** Zed-inspired — minimal, near-black dark mode, precise typography
-- **Primary background:** `#0d0d0d` (near black)
+- **Primary background:** `#0d0d0d`
 - **Secondary surface:** `#161616`
 - **Border:** `#2a2a2a`
-- **Primary accent:** `#8b5cf6` (violet — dream/unconscious feel)
+- **Primary accent:** `#8b5cf6` (violet)
 - **Text primary:** `#e5e5e5`
 - **Text muted:** `#737373`
 - **Font:** Inter (UI), JetBrains Mono (editor)
 - **No gradients, no shadows, no rounded corners on structural elements**
-- **Transitions:** 150ms ease — fast, not flashy
+- **Transitions:** 150ms ease
+
+### Welcome Screen & Installer Design
+- macOS native feel — similar to Xcode welcome window
+- Frosted glass effect on cards (backdrop-blur)
+- Subtle hover states on mode cards
+- Installer: full-screen animated onboarding, Dia Browser aesthetic
+- framer-motion veya pure CSS @keyframes — ikisi de kabul
 
 ---
 
 ## Coding Conventions
 
 - All components are functional React with TypeScript — no class components
-- Use named exports, not default exports (exception: page-level components)
+- Named exports, not default exports (exception: page-level components)
 - File names: `camelCase.ts` for lib, `PascalCase.tsx` for components
 - Zustand stores: one file per domain, no god stores
-- Tauri commands: named `snake_case` in Rust, wrapped as `camelCase` in TypeScript
+- Tauri commands: `snake_case` in Rust, `camelCase` in TypeScript
 - No `any` types — use `unknown` and narrow
-- All async functions use `async/await`, not `.then()`
-- Error handling: use `Result<T, E>` pattern in Rust; `try/catch` in TypeScript with typed errors
-- Comments only for non-obvious logic — do not comment what the code already says
+- All async functions use `async/await`
+- Error handling: `Result<T, E>` in Rust; `try/catch` in TypeScript
+- Comments only for non-obvious logic
 
 ---
 
 ## What NOT to do
 
-- Do NOT use Electron — this is a Tauri project
-- Do NOT store API keys in localStorage, Zustand persist, or any file
-- Do NOT call AI APIs from Rust — all AI calls go through TypeScript
+- Do NOT use Electron
+- Do NOT store API keys in localStorage, Zustand persist, or any plain file
+- Do NOT call AI APIs from Rust
 - Do NOT use class-based React components
-- Do NOT add dependencies without checking if Tauri already provides the capability natively
-- Do NOT use `console.log` in production code — use the structured logger
-- Do NOT access the filesystem directly from React — always go through Tauri FS commands
+- Do NOT hardcode the OpenRouter API key as a plain string in source — use env variable
+- Do NOT add dependencies without checking Tauri native capabilities first
+- Do NOT use `console.log` in production — use structured logger
+- Do NOT access filesystem directly from React — go through Tauri FS commands
+- Do NOT attempt Linux cross-compilation from macOS — use GitHub Actions
 
 ---
 
 ## Current Phase
 
-**Phase 0 — Foundation**
+**Alpha 2 — Final**
 
-Focus on: project skeleton, app window layout, file open/create, basic editor.
-Do NOT build AI features yet in Phase 0.
+Tamamlananlar:
+- [x] WelcomeScreen component (Xcode-style)
+- [x] App mode routing (welcome → project / playground)
+- [x] Playground mode UI
+- [x] OpenRouter integration (GPT-4o-mini-free)
+- [x] Rate limiting (3/session soft limit)
+
+Kalan görevler:
+- [ ] Installer / First Launch Experience (Dia Browser tarzı animasyonlu onboarding)
+- [ ] Linux .deb build konfigürasyonu (tauri.conf.json + GitHub Actions)
+- [ ] Alpha 2 final build (.dmg + .deb via Actions)
+- [ ] GitHub Release v0.1.0-alpha.2
 
 ---
 

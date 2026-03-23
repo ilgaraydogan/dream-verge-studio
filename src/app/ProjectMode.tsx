@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Navigator } from '../navigator/Navigator';
-import { Editor } from '../editor/Editor';
-import { Analysis } from '../analysis/Analysis';
-import { Inspector } from '../inspector/Inspector';
-import { Settings } from '../settings/Settings';
-import { SoulUpdateModal } from '../soul/SoulUpdateModal';
-import { OnboardingModal, useOnboarding } from '../onboarding/OnboardingModal';
-import { Toolbar } from './Toolbar';
-import { useSettingsStore } from '../../store/settingsStore';
-import { useSoulStore } from '../../store/soulStore';
-import { useProjectStore } from '../../store/projectStore';
-import { generateSoulUpdateProposal, shouldTriggerSoulUpdate } from '../../lib/soul/soulUpdater';
-import { parseConfig, DEFAULT_CONFIG } from '../../lib/project/config';
+import { Navigator } from '../components/navigator/Navigator';
+import { Editor } from '../components/editor/Editor';
+import { Analysis } from '../components/analysis/Analysis';
+import { Inspector } from '../components/inspector/Inspector';
+import { Settings } from '../components/settings/Settings';
+import { SoulUpdateModal } from '../components/soul/SoulUpdateModal';
+import { OnboardingModal, useOnboarding } from '../components/onboarding/OnboardingModal';
+import { Toolbar } from '../components/app/Toolbar';
+import { useSettingsStore } from '../store/settingsStore';
+import { useSoulStore } from '../store/soulStore';
+import { useProjectStore } from '../store/projectStore';
+import { generateSoulUpdateProposal, shouldTriggerSoulUpdate } from '../lib/soul/soulUpdater';
+import { parseConfig, DEFAULT_CONFIG } from '../lib/project/config';
 import { writeTextFile, readTextFile, readDir } from '@tauri-apps/plugin-fs';
 
-export function Layout() {
+export function ProjectMode() {
   const [showSettings, setShowSettings] = useState(false);
   const [triggerAnalysis, setTriggerAnalysis] = useState(0);
   const { checkApiKeys } = useSettingsStore();
