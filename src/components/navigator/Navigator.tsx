@@ -14,7 +14,7 @@ interface DreamFileInfo {
 }
 
 export function Navigator() {
-  const { projectPath, projectName, dreamFiles, setDreamFiles } = useProjectStore();
+  const { projectPath, dreamFiles, setDreamFiles } = useProjectStore();
   const { currentFile, setCurrentFile, setCurrentDream, setCurrentContent, setDirty } = useEditorStore();
   const [loading, setLoading] = useState(false);
   const [sortedDreams, setSortedDreams] = useState<DreamFileInfo[]>([]);
